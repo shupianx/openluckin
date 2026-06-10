@@ -5,7 +5,7 @@
   </picture>
   <p>
     <img alt="version" src="https://img.shields.io/badge/version-0.1.0-blue">
-    <img alt="status" src="https://img.shields.io/badge/status-early%20testing-orange">
+    <img alt="status" src="https://img.shields.io/badge/status-beta-orange">
     <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey">
   </p>
 </div>
