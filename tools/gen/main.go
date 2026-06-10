@@ -1,0 +1,370 @@
+// tools/gen 是 openluckin 的代码生成器：
+// 读取 schema/tools.json（官方 MCP 工具快照），生成
+//   - internal/cli/gen_commands.go：每个工具一条 toolCommand 表项
+//   - skill/SKILL.md：给外部 agent 的使用说明书
+// 通过仓库根目录的 `go generate ./...` 触发。
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"go/format"
+	"log"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"text/template"
+	"unicode"
+)
+
+// ---- schema/tools.json 的数据模型 ----
+
+type tool struct {
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	InputSchema inputSchema `json:"inputSchema"`
+}
+
+type inputSchema struct {
+	Properties map[string]json.RawMessage `json:"properties"`
+	Required   []string                   `json:"required"`
+}
+
+type prop struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Items       *prop  `json:"items"`
+}
+
+// ---- 生成目标的数据模型（喂给模板和文档） ----
+
+type param struct {
+	Flag      string // kebab-case flag 名
+	Key       string // 原始字段名
+	Kind      string // toolcmd.go 里的 kind 标识符
+	Required  bool
+	Desc      string
+	RawSchema string // 嵌套参数的原始 schema（缩进 JSON），用于文档
+	Example   string // 文档示例里的取值
+}
+
+type command struct {
+	Use    string
+	Tool   string
+	Short  string
+	Params []param
+}
+
+// 个别工具名机械转换后不好用，这里做人工覆盖。
+var nameOverrides = map[string]string{
+	"searchProductForMcp": "search-product",
+}
+
+func main() {
+	schemaPath := flag.String("schema", "schema/tools.json", "工具快照路径")
+	outCode := flag.String("out-code", "internal/cli/gen_commands.go", "生成的命令表路径")
+	outSkill := flag.String("out-skill", "skill/openluckin-order/SKILL.md", "生成的说明书路径")
+	flag.Parse()
+
+	data, err := os.ReadFile(*schemaPath)
+	if err != nil {
+		log.Fatalf("读取快照失败: %v", err)
+	}
+	var tools []tool
+	if err := json.Unmarshal(data, &tools); err != nil {
+		log.Fatalf("解析快照失败: %v", err)
+	}
+
+	commands := make([]command, 0, len(tools))
+	for _, t := range tools {
+		commands = append(commands, buildCommand(t))
+	}
+
+	if err := writeCode(*outCode, commands); err != nil {
+		log.Fatalf("生成 %s 失败: %v", *outCode, err)
+	}
+	if err := writeSkill(*outSkill, commands); err != nil {
+		log.Fatalf("生成 %s 失败: %v", *outSkill, err)
+	}
+	fmt.Printf("已生成 %s 与 %s（共 %d 个命令）\n", *outCode, *outSkill, len(commands))
+}
+
+func buildCommand(t tool) command {
+	use, ok := nameOverrides[t.Name]
+	if !ok {
+		use = kebab(t.Name)
+	}
+	// required 数组的顺序是官方 schema 里写的业务顺序（如先经度后纬度），排序时沿用。
+	requiredIdx := map[string]int{}
+	for i, r := range t.InputSchema.Required {
+		requiredIdx[r] = i
+	}
+
+	params := make([]param, 0, len(t.InputSchema.Properties))
+	for key, raw := range t.InputSchema.Properties {
+		var p prop
+		if err := json.Unmarshal(raw, &p); err != nil {
+			log.Fatalf("工具 %s 参数 %s schema 解析失败: %v", t.Name, key, err)
+		}
+		kind := kindFor(p)
+		_, isRequired := requiredIdx[key]
+		pa := param{
+			Flag:     kebab(key),
+			Key:      key,
+			Kind:     kind,
+			Required: isRequired,
+			Desc:     p.Description,
+			Example:  exampleFor(key, kind),
+		}
+		if kind == "kindJSON" {
+			var buf bytes.Buffer
+			if err := json.Indent(&buf, raw, "", "  "); err == nil {
+				pa.RawSchema = buf.String()
+			}
+		}
+		params = append(params, pa)
+	}
+	// map 遍历无序，排序保证生成结果可重现：必填在前并沿用 required 数组
+	// 的官方顺序，可选参数按 flag 名排序。
+	sort.Slice(params, func(i, j int) bool {
+		if params[i].Required != params[j].Required {
+			return params[i].Required
+		}
+		if params[i].Required {
+			return requiredIdx[params[i].Key] < requiredIdx[params[j].Key]
+		}
+		return params[i].Flag < params[j].Flag
+	})
+	return command{Use: use, Tool: t.Name, Short: t.Description, Params: params}
+}
+
+// kindFor 把 JSON Schema 类型映射成 toolcmd.go 的 paramKind 标识符。
+func kindFor(p prop) string {
+	switch p.Type {
+	case "string":
+		return "kindString"
+	case "integer":
+		return "kindInteger"
+	case "number":
+		return "kindNumber"
+	case "boolean":
+		return "kindBool"
+	case "array":
+		if p.Items != nil && p.Items.Type == "string" {
+			return "kindStringSlice"
+		}
+		return "kindJSON"
+	default: // object 及其他嵌套结构
+		return "kindJSON"
+	}
+}
+
+func kebab(s string) string {
+	var b strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				b.WriteByte('-')
+			}
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+// exampleFor 给文档示例一个贴近真实的取值；优先按字段名，找不到按类型兜底。
+func exampleFor(key, kind string) string {
+	byKey := map[string]string{
+		"latitude":           "39.9087",
+		"longitude":          "116.3975",
+		"deptId":             "1234",
+		"deptName":           "望京",
+		"query":              "'生椰拿铁'",
+		"productId":          "5826",
+		"skuCode":            "'SKU123'",
+		"amount":             "1",
+		"orderId":            "'202606100001'",
+		"couponCodeList":     "'CODE1,CODE2'",
+		"productList":        `'[{"productId":5826,"skuCode":"SKU123","amount":1}]'`,
+		"attrOperationParam": `'{"attributeId":1,"subAttr":{"attributeId":2,"operation":1}}'`,
+	}
+	if v, ok := byKey[key]; ok {
+		return v
+	}
+	switch kind {
+	case "kindString":
+		return "'xxx'"
+	case "kindInteger", "kindNumber":
+		return "1"
+	case "kindBool":
+		return "true"
+	case "kindStringSlice":
+		return "'a,b'"
+	default:
+		return "'{}'"
+	}
+}
+
+// ---- 生成 gen_commands.go ----
+
+var codeTmpl = template.Must(template.New("code").Parse(`// Code generated by tools/gen from schema/tools.json. DO NOT EDIT.
+
+package cli
+
+// genToolCommands 是官方 MCP 工具到 CLI 子命令的静态映射表，
+// 由 toolcmd.go 在 init 时注册为 cobra 命令。
+var genToolCommands = []toolCommand{
+{{- range .}}
+	{
+		use:   {{printf "%q" .Use}},
+		tool:  {{printf "%q" .Tool}},
+		short: {{printf "%q" .Short}},
+		params: []toolParam{
+{{- range .Params}}
+			{flag: {{printf "%q" .Flag}}, key: {{printf "%q" .Key}}, kind: {{.Kind}}, required: {{.Required}}, desc: {{printf "%q" .Desc}}},
+{{- end}}
+		},
+	},
+{{- end}}
+}
+`))
+
+func writeCode(path string, commands []command) error {
+	var buf bytes.Buffer
+	if err := codeTmpl.Execute(&buf, commands); err != nil {
+		return err
+	}
+	src, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("gofmt 失败（模板产物不合法？）: %w", err)
+	}
+	return os.WriteFile(path, src, 0o644)
+}
+
+// ---- 生成 SKILL.md ----
+
+func kindLabel(kind string) string {
+	switch kind {
+	case "kindString":
+		return "string"
+	case "kindInteger":
+		return "integer"
+	case "kindNumber":
+		return "number"
+	case "kindBool":
+		return "boolean"
+	case "kindStringSlice":
+		return "string 列表"
+	default:
+		return "JSON"
+	}
+}
+
+// skillBin 是 SKILL.md 中使用的二进制固定路径（刻意不依赖 PATH）。
+// 用 $HOME 而非 ~：~ 被引号包裹时 shell 不展开，agent 拼命令时很容易踩。
+const skillBin = `"$HOME/.openluckin/bin/openluckin"`
+
+// siteBase 是安装服务的域名，部署后替换（与 web/public 下安装脚本保持一致）。
+const siteBase = "https://openluckin.com"
+
+const skillPreamble = `---
+name: openluckin-order
+description: 通过 openluckin CLI 为用户点瑞幸咖啡。当用户想找瑞幸门店、搜索商品、下单买咖啡、查询或取消订单时使用。
+---
+
+# openluckin —— 瑞幸咖啡点单 CLI
+
+> 本文档由 tools/gen 从官方 MCP 工具快照自动生成，请勿手改；
+> 重新生成：make snapshot && go generate ./...
+
+openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性命令行调用：
+传参 → stdout 输出结果（JSON 文本）→ 退出。退出码 0 为成功；失败时退出码非 0，
+错误信息输出到 stderr。命令之间无会话状态，可独立调用。
+
+## 前置条件
+
+- 可执行文件位置（不在 PATH 中，按平台区分）：
+  - macOS / Linux："$HOME/.openluckin/bin/openluckin"
+  - Windows（PowerShell）："$env:USERPROFILE\.openluckin\bin\openluckin.exe"
+- 本文档示例均按 macOS/Linux 路径书写，Windows 下请替换为上述 exe 路径
+- 可执行文件不存在时，替用户安装后继续（安装到上述固定位置，不要用其他方式）：
+  - macOS / Linux：curl -fsSL ` + siteBase + `/install.sh | bash
+  - Windows（PowerShell）：irm ` + siteBase + `/install.ps1 | iex
+- 鉴权失败时替用户执行 login 子命令：它会自动呼出浏览器并阻塞等待，
+  告知用户去浏览器完成登录；命令成功返回（token 自动保存）后重试原命令
+
+## 标准点单流程
+
+1. 用用户位置经纬度调 query-shop-list 找门店，从返回中取门店 ID（deptId）
+2. 用 search-product 按自然语言搜索商品，从返回中取 productId 和 skuCode
+3. 如需调整规格（冰量/糖度/杯型等），先 query-product-detail-info 查可选属性，
+   再用 switch-product 切换属性，得到新的 skuCode
+4. 用 preview-order 预览订单，向用户确认商品、规格、价格；返回中如有可用
+   优惠券（couponCodeList），记下备用
+5. 用户确认后调 create-order 正式下单（couponCodeList 传 preview 返回的值）
+6. 若返回的 needPay 为 true：把 payOrderUrl（微信支付链接）渲染成二维码
+   直接展示给用户扫码（例如 qrencode -t ANSIUTF8 '<链接>'；无可用工具时
+   退而展示 payOrderQrCodeUrl 二维码图片链接），不要只贴一条 URL
+7. 用户表示付款完成后，用 create-order 返回的 orderIdStr 调
+   query-order-detail-info，确认 orderStatus 已不是 10（待付款）后，
+   把 takeMealCodeInfo 中的取餐单ID（takeOrderId）和取餐码（code）告知用户
+8. 需要时用 cancel-order 取消订单
+
+**重要约束**
+
+- create-order 会产生真实订单和扣费，下单前必须向用户复述门店、商品、规格、
+  数量、价格并获得明确同意
+- 不要凭空构造 deptId / productId / skuCode，必须来自上游命令的真实返回
+- 经纬度使用 GCJ-02 坐标系（国内地图通用坐标）
+
+## 命令参考
+
+各命令返回 JSON 的字段含义见 [references/responses.md](references/responses.md)，
+解读返回结果（如提取 deptId、skuCode、支付链接、取餐码）前先查阅。
+`
+
+func writeSkill(path string, commands []command) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	var b strings.Builder
+	b.WriteString(skillPreamble)
+
+	for _, c := range commands {
+		fmt.Fprintf(&b, "\n### %s — %s\n\n", c.Use, c.Short)
+		if len(c.Params) > 0 {
+			b.WriteString("| 参数 | 类型 | 必填 | 说明 |\n|---|---|---|---|\n")
+			for _, p := range c.Params {
+				req := ""
+				if p.Required {
+					req = "✓"
+				}
+				fmt.Fprintf(&b, "| --%s | %s | %s | %s |\n", p.Flag, kindLabel(p.Kind), req, p.Desc)
+			}
+		}
+		b.WriteString("\n示例：\n\n```bash\n" + skillBin + " " + c.Use)
+		for _, p := range c.Params {
+			if p.Required {
+				fmt.Fprintf(&b, " --%s %s", p.Flag, p.Example)
+			}
+		}
+		b.WriteString("\n```\n")
+		for _, p := range c.Params {
+			if p.RawSchema != "" {
+				fmt.Fprintf(&b, "\n--%s 的取值结构（JSON Schema）：\n\n```json\n%s\n```\n", p.Flag, p.RawSchema)
+			}
+		}
+	}
+
+	b.WriteString("\n## 通用逃生通道\n\n" +
+		"高层命令未覆盖的工具可直接透传调用：\n\n" +
+		"```bash\n" + skillBin + " tools                      # 列出底层全部工具及 schema\n" +
+		skillBin + " call <tool> --args '{...}' # 按工具名直接调用\n```\n")
+
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}

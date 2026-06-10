@@ -1,0 +1,9 @@
+/openluckin
+/bin/
+*.log
+.env
+# release 产物不入库，由 make release 生成
+/web/public/dl/
+# skill zip 由 make skill-assets 打包生成
+/web/public/openluckin-order.zip
+.DS_Store

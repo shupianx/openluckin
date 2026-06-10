@@ -1,0 +1,281 @@
+[
+  {
+    "name": "queryShopList",
+    "description": "瑞幸咖啡查询门店列表",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "deptName": {
+          "description": "门店名称",
+          "type": "string"
+        },
+        "latitude": {
+          "description": "纬度",
+          "type": "number"
+        },
+        "longitude": {
+          "description": "经度",
+          "type": "number"
+        }
+      },
+      "required": [
+        "longitude",
+        "latitude"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "searchProductForMcp",
+    "description": "瑞幸咖啡根据用户传入query， 匹配商品推荐结果",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "deptId": {
+          "description": "门店ID",
+          "type": "integer"
+        },
+        "query": {
+          "description": "用户原始查询文本",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deptId",
+        "query"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "switchProduct",
+    "description": "瑞幸咖啡商品属性切换",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "description": "商品数量",
+          "type": "integer"
+        },
+        "attrOperationParam": {
+          "description": "商品属性切换参数",
+          "properties": {
+            "attributeId": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "subAttr": {
+              "properties": {
+                "attributeId": {
+                  "format": "int64",
+                  "type": "integer"
+                },
+                "operation": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "attributeId",
+                "operation"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "attributeId",
+            "subAttr"
+          ],
+          "type": "object"
+        },
+        "deptId": {
+          "description": "门店ID",
+          "type": "integer"
+        },
+        "productId": {
+          "description": "商品ID",
+          "type": "integer"
+        },
+        "skuCode": {
+          "description": "商品SKU编码",
+          "type": "string"
+        }
+      },
+      "required": [
+        "deptId",
+        "productId",
+        "skuCode",
+        "attrOperationParam",
+        "amount"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "queryProductDetailInfo",
+    "description": "瑞幸咖啡查询商品详情",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "deptId": {
+          "description": "门店ID",
+          "type": "integer"
+        },
+        "productId": {
+          "description": "商品ID",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "deptId",
+        "productId"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "previewOrder",
+    "description": "瑞幸咖啡订单预览",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "deptId": {
+          "description": "门店ID",
+          "type": "integer"
+        },
+        "productList": {
+          "description": "订单商品列表",
+          "items": {
+            "properties": {
+              "amount": {
+                "format": "int32",
+                "type": "integer"
+              },
+              "productId": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "skuCode": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount",
+              "productId",
+              "skuCode"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "deptId",
+        "productList"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "createOrder",
+    "description": "瑞幸咖啡创建订单",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "couponCodeList": {
+          "description": "优惠券列表，此参数来自 `previewOrder` 的返回字段 `couponCodeList`",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "deptId": {
+          "description": "门店id",
+          "type": "integer"
+        },
+        "latitude": {
+          "description": "纬度",
+          "type": "number"
+        },
+        "longitude": {
+          "description": "经度",
+          "type": "number"
+        },
+        "productList": {
+          "description": "订单商品列表",
+          "items": {
+            "properties": {
+              "amount": {
+                "format": "int32",
+                "type": "integer"
+              },
+              "productId": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "skuCode": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount",
+              "productId",
+              "skuCode"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "deptId",
+        "productList",
+        "longitude",
+        "latitude"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "queryOrderDetailInfo",
+    "description": "瑞幸咖啡查询订单详情",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "orderId": {
+          "description": "订单ID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "cancelOrder",
+    "description": "瑞幸咖啡取消订单",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "orderId": {
+          "description": "订单ID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "orderId"
+      ],
+      "returnDirect": false,
+      "type": "object"
+    }
+  }
+]
