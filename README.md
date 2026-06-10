@@ -1,6 +1,11 @@
-# OpenLuckin ☕
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+    <img alt="OpenLuckin" src="assets/banner-light.svg" width="560">
+  </picture>
+</div>
 
-> 一句话，幸运到手 —— 非官方瑞幸咖啡 CLI + AI Agent Skill，基于瑞幸官方 MCP 接口封装，让任何智能体帮你完成找店、点单、付款、取餐码全流程。
+> 非官方瑞幸咖啡 CLI + AI Agent Skill，基于瑞幸官方 MCP 接口封装，让任何智能体帮你完成找店、点单、付款、取餐码全流程。
 
 官网：[openluckin.com](https://openluckin.com)
 
@@ -57,8 +62,6 @@ irm https://openluckin.com/install.ps1 | iex
 openluckin login
 ```
 
-呼出浏览器登录瑞幸账号，token 自动保存到本机 `~/.openluckin/.env`（权限 600），之后所有命令免配置。
-
 **点一杯咖啡的完整流程**
 
 ```bash
@@ -100,16 +103,6 @@ openluckin query-order-detail-info --order-id '<orderIdStr>'
 
 每个命令的参数用 `openluckin <命令> --help` 查看；返回字段说明见 [skill/openluckin-order/references/responses.md](skill/openluckin-order/references/responses.md)。
 
-## 配置
-
-加载优先级：命令行 flag > 环境变量 > `./.env` > `~/.openluckin/.env` > 默认值。
-
-| 变量 | 说明 |
-|---|---|
-| `LUCKIN_MCP_TOKEN` | 鉴权 token（`login` 自动写入；兼容 `LUCKIN_MCP_ORDER_TOKEN`） |
-| `LUCKIN_MCP_ENDPOINT` | MCP 端点，默认官方 `gwmcp.lkcoffee.com/order/user/mcp` |
-
-token 只保存在你本机，不经过任何第三方服务器。
 
 ## 工作原理
 
