@@ -1,0 +1,45 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许在 Actions 页面手动触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # 质量闸：编译 + vet + 单元测试，挂了就不发布
+      - name: Check
+        run: make check
+
+      # 五平台交叉编译 + sha256 校验和 + skill 打包，全部输出到 web/public/
+      - name: Release build
+        run: make release VERSION="0.1.0-$(git rev-parse --short HEAD)"
+
+      - name: Build site
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      # web/dist 此时包含：落地页、五平台二进制(dl/)、checksums、
+      # skill zip、install.sh/.ps1 —— 整站静态资产一次性上传
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web/dist --project-name=openluckin
