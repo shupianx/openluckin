@@ -71,7 +71,7 @@ async function copy(text, key) {
         </button>
       </div>
 
-      <p class="cmd-label cli-label">复制下面内容发给你的智能体：</p>
+      <p class="cmd-label cli-label">复制下面内容发给你的智能体（OpenClaw、Hermes 等）：</p>
       <div class="cmd">
         <code>请下载安装 OpenLuckin Skill：<br />{{ zipUrl }}</code>
       <button class="copy-btn" :class="{ done: copied === 'skill' }" aria-label="复制" title="复制"
