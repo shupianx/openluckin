@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-    <img alt="OpenLuckin" src="assets/banner-light.svg" width="560">
+    <img alt="OpenLuckin" src="assets/banner-light.svg" width="400">
   </picture>
 </div>
 
