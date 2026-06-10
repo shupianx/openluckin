@@ -260,7 +260,9 @@ async function copy(text, key) {
 .dd-trigger {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* 图标靠左、箭头钉右，文字差量被内部吸收 */
   gap: 7px;
+  min-width: 124px; /* 锁定宽度 ≥ 最宽选项（Windows），切换平台不再引起框宽突变 */
   border: none;
   border-right: 1px solid rgba(255, 255, 255, 0.2); /* 与命令区的分隔线 */
   border-radius: 0;
