@@ -3,6 +3,9 @@ name: Build & Deploy
 on:
   push:
     branches: [main]
+    paths-ignore: # 纯文档改动不触发部署
+      - 'README.md'
+      - 'assets/**'
   workflow_dispatch: # 允许在 Actions 页面手动触发
 
 jobs:
