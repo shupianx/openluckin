@@ -226,6 +226,10 @@ async function copy(text, key) {
   line-height: 1.9;
   color: #c7cbf0;
   margin: 0 0 22px;
+  /* 不参与列宽计算（否则长句会把右栏撑爆、挤垮左右布局），
+     宽度跟随由复制框决定的列宽自动折行 */
+  width: 0;
+  min-width: 100%;
 }
 .cmd-label {
   font-size: 14px;
