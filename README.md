@@ -3,6 +3,11 @@
     <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
     <img alt="OpenLuckin" src="assets/banner-light.svg" width="400">
   </picture>
+  <p>
+    <img alt="version" src="https://img.shields.io/badge/version-0.1.0-blue">
+    <img alt="status" src="https://img.shields.io/badge/status-early%20testing-orange">
+    <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey">
+  </p>
 </div>
 
 > 非官方瑞幸咖啡 CLI + AI Agent Skill，基于瑞幸官方 MCP 接口封装，让任何智能体帮你完成找店、点单、付款、取餐码全流程。
