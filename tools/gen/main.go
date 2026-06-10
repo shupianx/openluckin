@@ -307,12 +307,14 @@ openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性
 4. 用 preview-order 预览订单，向用户确认商品、规格、价格；返回中如有可用
    优惠券（couponCodeList），记下备用
 5. 用户确认后调 create-order 正式下单（couponCodeList 传 preview 返回的值）
-6. 若返回的 needPay 为 true：把 payOrderUrl（微信支付链接）渲染成二维码
-   直接展示给用户扫码（例如 qrencode -t ANSIUTF8 '<链接>'；无可用工具时
-   退而展示 payOrderQrCodeUrl 二维码图片链接），不要只贴一条 URL
+6. 若返回的 needPay 为 true：payOrderQrCodeUrl 本身就指向一张付款二维码
+   图片，直接用 Markdown 图片语法即时展示给用户扫码：
+   ![付款二维码](<payOrderQrCodeUrl>)
+   无需用任何二维码生成工具转换，也不要只贴 URL 文本
 7. 用户表示付款完成后，用 create-order 返回的 orderIdStr 调
    query-order-detail-info，确认 orderStatus 已不是 10（待付款）后，
-   把 takeMealCodeInfo 中的取餐单ID（takeOrderId）和取餐码（code）告知用户
+   把 takeMealCodeInfo 中的取餐单ID（takeOrderId）和取餐码（code）告知
+   用户；返回中如含取餐码二维码图片链接，同样用 Markdown 图片直接展示
 8. 需要时用 cancel-order 取消订单
 
 **重要约束**

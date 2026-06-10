@@ -3,6 +3,15 @@ name: openluckin-order
 description: 通过 openluckin CLI 为用户点瑞幸咖啡。当用户想找瑞幸门店、搜索商品、下单买咖啡、查询或取消订单时使用。
 ---
 
+# openluckin —— 瑞幸咖啡点单 CLI
+
+> 本文档由 tools/gen 从官方 MCP 工具快照自动生成，请勿手改；
+> 重新生成：make snapshot && go generate ./...
+
+openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性命令行调用：
+传参 → stdout 输出结果（JSON 文本）→ 退出。退出码 0 为成功；失败时退出码非 0，
+错误信息输出到 stderr。命令之间无会话状态，可独立调用。
+
 ## 前置条件
 
 - 可执行文件位置（不在 PATH 中，按平台区分）：
@@ -24,12 +33,14 @@ description: 通过 openluckin CLI 为用户点瑞幸咖啡。当用户想找瑞
 4. 用 preview-order 预览订单，向用户确认商品、规格、价格；返回中如有可用
    优惠券（couponCodeList），记下备用
 5. 用户确认后调 create-order 正式下单（couponCodeList 传 preview 返回的值）
-6. 若返回的 needPay 为 true：把 payOrderUrl（微信支付链接）渲染成二维码
-   直接展示给用户扫码（例如 qrencode -t ANSIUTF8 '<链接>'；无可用工具时
-   退而展示 payOrderQrCodeUrl 二维码图片链接），不要只贴一条 URL
+6. 若返回的 needPay 为 true：payOrderQrCodeUrl 本身就指向一张付款二维码
+   图片，直接用 Markdown 图片语法即时展示给用户扫码：
+   ![付款二维码](<payOrderQrCodeUrl>)
+   无需用任何二维码生成工具转换，也不要只贴 URL 文本
 7. 用户表示付款完成后，用 create-order 返回的 orderIdStr 调
    query-order-detail-info，确认 orderStatus 已不是 10（待付款）后，
-   把 takeMealCodeInfo 中的取餐单ID（takeOrderId）和取餐码（code）告知用户
+   把 takeMealCodeInfo 中的取餐单ID（takeOrderId）和取餐码（code）告知
+   用户；返回中如含取餐码二维码图片链接，同样用 Markdown 图片直接展示
 8. 需要时用 cancel-order 取消订单
 
 **重要约束**

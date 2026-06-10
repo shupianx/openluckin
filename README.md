@@ -130,7 +130,6 @@ make check      # build + vet + test
 make snapshot   # 从官方 MCP 拉取工具清单快照（需 token）
 make generate   # 由快照重新生成子命令表 + SKILL.md
 make release    # 五平台交叉编译 + skill 打包，输出到 web/public/
-cd web && npm run dev   # 官网本地开发
 ```
 
 ## 免责声明
