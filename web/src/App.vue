@@ -8,6 +8,8 @@ const origin = window.location.origin.includes('localhost')
 
 const zipUrl = `${origin}/openluckin-order.zip`
 const copyText = `请下载安装 OpenLuckin Skill：\n${zipUrl}`
+// GitHub 即注册表：npx skills 会扫描仓库内的 SKILL.md 并装到本机各 agent
+const quickCmd = 'npx skills add shupianx/openluckin'
 
 // 手动安装 CLI：按平台切换命令
 const cliCmds = {
@@ -52,7 +54,24 @@ async function copy(text, key) {
         <CoffeeCup />
       </div>
       <div class="get-skill">
-      <p class="cmd-label">复制下面内容发给你的智能体：</p>
+      <p class="cmd-label">快速安装：</p>
+      <div class="cmd quick-cmd">
+        <code>{{ quickCmd }}</code>
+        <button class="copy-btn" :class="{ done: copied === 'quick' }" aria-label="复制" title="复制"
+          @click="copy(quickCmd, 'quick')">
+          <svg v-if="copied !== 'quick'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="cmd-label cli-label">复制下面内容发给你的智能体：</p>
       <div class="cmd">
         <code>请下载安装 OpenLuckin Skill：<br />{{ zipUrl }}</code>
       <button class="copy-btn" :class="{ done: copied === 'skill' }" aria-label="复制" title="复制"
@@ -206,13 +225,15 @@ async function copy(text, key) {
   margin-top: 22px;
 }
 /* 双类提高优先级：覆盖 .cmd 的 flex-start（那是给 skill 框按钮贴右上角用的），
-   CLI 框是单行内容，全部垂直居中 */
-.cmd.cli-cmd {
+   单行内容的框全部垂直居中 */
+.cmd.cli-cmd,
+.cmd.quick-cmd {
   position: relative; /* 下拉菜单的定位锚点 */
   display: flex;
   align-items: center;
 }
-.cmd.cli-cmd .copy-btn {
+.cmd.cli-cmd .copy-btn,
+.cmd.quick-cmd .copy-btn {
   margin: 0 -6px 0 0; /* 取消贴右上角的负边距，保持垂直居中 */
 }
 .cli-cmd code {
