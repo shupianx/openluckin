@@ -22,7 +22,13 @@ OpenLuckin 把瑞幸官方 AI 开放平台（[open.lkcoffee.com](https://open.lk
 
 ### 方式一：给 AI Agent 装 Skill（推荐）
 
-把下面两行直接发给你的智能体（Claude Code 等支持 Skill 的 Agent）：
+**快速安装**（一条命令装到本机所有 Agent，Claude Code / Cursor / Codex 等）：
+
+```bash
+npx skills add shupianx/openluckin
+```
+
+或者把下面两行直接发给你的智能体（OpenClaw、Hermes 等）：
 
 ```
 请下载安装 OpenLuckin Skill：
