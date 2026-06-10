@@ -236,6 +236,10 @@ async function copy(text, key) {
 .cmd.quick-cmd .copy-btn {
   margin: 0 -6px 0 0; /* 取消贴右上角的负边距，保持垂直居中 */
 }
+.cmd.quick-cmd {
+  /* 块级 flex 撑满容器宽（与下方框对齐），命令短时把按钮钉到右缘 */
+  justify-content: space-between;
+}
 .cli-cmd code {
   display: inline-block; /* 让 min-width 生效，平台切换不引起宽度跳变 */
 }
