@@ -225,7 +225,6 @@ async function copy(text, key) {
   font-size: 15px;
   line-height: 1.9;
   color: #c7cbf0;
-  max-width: 30em;
   margin: 0 0 22px;
 }
 .cmd-label {
