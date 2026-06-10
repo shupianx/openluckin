@@ -54,6 +54,11 @@ async function copy(text, key) {
         <CoffeeCup />
       </div>
       <div class="get-skill">
+      <p class="intro">
+        OpenLuckin 是非官方瑞幸点单工具（CLI + Agent
+        Skill），基于瑞幸官方接口封装。安装后对你的智能体说一句「帮我点杯生椰拿铁」，
+        它就能完成找店、点单、付款、报取餐码的全流程。
+      </p>
       <p class="cmd-label">快速安装：</p>
       <div class="cmd quick-cmd">
         <code>{{ quickCmd }}</code>
@@ -215,6 +220,13 @@ async function copy(text, key) {
   /* 收缩到内容宽度，内部左对齐——说明文字与框左缘对齐 */
   flex: 0 0 auto;
   text-align: left;
+}
+.intro {
+  font-size: 15px;
+  line-height: 1.9;
+  color: #c7cbf0;
+  max-width: 30em;
+  margin: 0 0 22px;
 }
 .cmd-label {
   font-size: 14px;
