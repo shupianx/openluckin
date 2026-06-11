@@ -351,4 +351,50 @@ footer {
   font-size: 13px;
   padding: 20px 24px;
 }
+
+/* ---- 移动端适配 ---- */
+@media (max-width: 720px) {
+  .hero {
+    padding: 48px 16px;
+  }
+  .site-title {
+    top: 16px;
+    left: 16px;
+    font-size: 20px;
+    gap: 8px;
+  }
+  .site-logo {
+    height: 20px;
+  }
+  .github-link {
+    top: 16px;
+    right: 16px;
+  }
+  .slogan {
+    font-size: 24px;
+    letter-spacing: 4px;
+    margin-top: 28px;
+  }
+  .get-skill {
+    width: 100%;
+  }
+  .intro {
+    font-size: 14px;
+  }
+  /* 框占满屏宽；长 URL / 长命令允许断行（!important 压过命令区的
+     行内 min-width 锁宽——那是桌面端防切换突变用的） */
+  .cmd {
+    width: 100%;
+  }
+  .cmd code {
+    min-width: 0 !important;
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .cmd.quick-cmd {
+    display: flex;
+    justify-content: space-between;
+  }
+}
 </style>

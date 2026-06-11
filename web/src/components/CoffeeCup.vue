@@ -432,4 +432,10 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 450px; /* 高度即缩放：垂直视场角固定，画布越高杯子像素尺寸越大 */
 }
+
+@media (max-width: 720px) {
+  .cup3d {
+    height: 320px; /* 小屏压缩画布高度，杯子等比缩小（fitCamera 自适应宽度） */
+  }
+}
 </style>
