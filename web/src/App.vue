@@ -1,10 +1,16 @@
 <script setup>
-import { computed, ref } from 'vue'
-import CoffeeCup from './components/CoffeeCup.vue'
+import { computed, ref, defineAsyncComponent } from 'vue'
 
-const origin = window.location.origin.includes('localhost')
-  ? 'https://openluckin.com' // 本地预览时回退到正式域名
-  : window.location.origin
+// 3D 杯子只在客户端加载：异步组件 + <ClientOnly> 包裹，
+// three.js 既不进 SSR 预渲染、也不阻塞首屏（单独 chunk，挂载后才拉取）。
+const CoffeeCup = defineAsyncComponent(() => import('./components/CoffeeCup.vue'))
+
+// 预渲染（SSR）时无 window，统一回退到正式域名；本地预览也回退到正式域名，
+// 仅真实生产域名下用当前 origin —— 三种情况服务端/客户端结果一致，不会 hydration 不匹配。
+const origin =
+  typeof window === 'undefined' || window.location.origin.includes('localhost')
+    ? 'https://openluckin.com'
+    : window.location.origin
 
 const zipUrl = `${origin}/openluckin-order.zip`
 const copyText = `请下载安装 OpenLuckin Skill：\n${zipUrl}`
@@ -51,7 +57,9 @@ async function copy(text, key) {
     <p class="slogan">一句话，幸运到手</p>
     <div class="hero-main">
       <div class="hero-left">
-        <CoffeeCup />
+        <ClientOnly>
+          <CoffeeCup />
+        </ClientOnly>
       </div>
       <div class="get-skill">
       <p class="intro">
@@ -59,7 +67,7 @@ async function copy(text, key) {
         Skill），基于瑞幸官方接口封装。安装后对你的智能体说一句「帮我点杯生椰拿铁」，
         它就能完成找店、点单、付款、报取餐码的全流程。
       </p>
-      <p class="cmd-label">快速安装：</p>
+      <p class="cmd-label">命令行快速安装：</p>
       <div class="cmd quick-cmd">
         <code>{{ quickCmd }}</code>
         <button class="copy-btn" :class="{ done: copied === 'quick' }" aria-label="复制" title="复制"
@@ -76,7 +84,9 @@ async function copy(text, key) {
         </button>
       </div>
 
-      <p class="cmd-label cli-label">复制下面内容发给你的智能体（OpenClaw、Hermes 等）：</p>
+      <p class="or-sep">或</p>
+
+      <p class="cmd-label">复制下面内容发给你的智能体（OpenClaw、Hermes 等）：</p>
       <div class="cmd">
         <code>请下载安装 OpenLuckin Skill：<br />{{ zipUrl }}</code>
       <button class="copy-btn" :class="{ done: copied === 'skill' }" aria-label="复制" title="复制"
@@ -238,6 +248,23 @@ async function copy(text, key) {
 }
 .cli-label {
   margin-top: 22px;
+}
+/* 两种安装方式之间的「或」：二选一关系，而非递进步骤。
+   居中文字 + 两侧细线，宽度跟随 .get-skill 列宽 */
+.or-sep {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 14px;
+  font-size: 13px;
+  color: #93a7e0;
+}
+.or-sep::before,
+.or-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
 }
 /* 双类提高优先级：覆盖 .cmd 的 flex-start（那是给 skill 框按钮贴右上角用的），
    单行内容的框全部垂直居中 */
