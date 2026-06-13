@@ -138,8 +138,9 @@ func (c Config) Validate() error {
 		return errors.New("MCP endpoint 为空，请通过 --endpoint 或 " + EnvEndpoint + " 设置")
 	}
 	if c.Token == "" {
-		return errors.New("缺少鉴权 token：请在 ~/" + ConfigDirName + "/.env 或当前目录 .env 写入 " +
-			EnvToken + "=<token>，或通过 --token / 环境变量传入（token 在 open.lkcoffee.com 申请）")
+		return errors.New("缺少鉴权 token：请运行 login 子命令呼出浏览器登录（token 自动保存）；" +
+			"也可在 ~/" + ConfigDirName + "/.env 或当前目录 .env 写入 " + EnvToken +
+			"=<token>，或通过 --token / 环境变量传入（token 在 open.lkcoffee.com 申请）")
 	}
 	return nil
 }

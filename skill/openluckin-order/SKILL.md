@@ -5,24 +5,28 @@ description: 通过 openluckin CLI 为用户点瑞幸咖啡。当用户想找瑞
 
 # openluckin —— 瑞幸咖啡点单 CLI
 
-> 本文档由 tools/gen 从官方 MCP 工具快照自动生成，请勿手改；
-> 重新生成：make snapshot && go generate ./...
-
 openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性命令行调用：
 传参 → stdout 输出结果（JSON 文本）→ 退出。退出码 0 为成功；失败时退出码非 0，
 错误信息输出到 stderr。命令之间无会话状态，可独立调用。
 
 ## 前置条件
 
-- 可执行文件位置（不在 PATH 中，按平台区分）：
+- 可执行文件固定安装在以下路径（按平台区分，不保证在 PATH 中）：
   - macOS / Linux："$HOME/.openluckin/bin/openluckin"
   - Windows（PowerShell）："$env:USERPROFILE\.openluckin\bin\openluckin.exe"
 - 本文档示例均按 macOS/Linux 路径书写，Windows 下请替换为上述 exe 路径
-- 可执行文件不存在时，替用户安装后继续（安装到上述固定位置，不要用其他方式）：
-  - macOS / Linux：curl -fsSL https://openluckin.com/install.sh | bash
-  - Windows（PowerShell）：irm https://openluckin.com/install.ps1 | iex
-- 鉴权失败时替用户执行 login 子命令：它会自动呼出浏览器并阻塞等待，
-  告知用户去浏览器完成登录；命令成功返回（token 自动保存）后重试原命令
+- 是否已安装只看上述固定路径的文件是否存在；不要用 which / command -v 或
+  直接执行 openluckin 来判断——二进制通常不在 agent shell 的 PATH 中，
+  会把已安装误判为未安装。用下面这条命令完成"未装则装"（已安装时不做任何事，
+  不要改用其他安装方式或安装位置）：
+  - macOS / Linux：
+    test -x "$HOME/.openluckin/bin/openluckin" || curl -fsSL https://openluckin.com/install.sh | bash
+  - Windows（PowerShell）：
+    if (-not (Test-Path "$env:USERPROFILE\.openluckin\bin\openluckin.exe")) { irm https://openluckin.com/install.ps1 | iex }
+- 登录状态无需预先检查，也不要在安装后主动登录：默认视为已登录，直接执行
+  业务命令。仅当命令以鉴权类错误失败（stderr 含「缺少鉴权 token」或
+  Unauthorized）时，才替用户执行 login 子命令：它会自动呼出浏览器并阻塞
+  等待，告知用户去浏览器完成登录；命令成功返回（token 自动保存）后重试原命令
 
 ## 标准点单流程
 
@@ -98,42 +102,6 @@ openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性
 "$HOME/.openluckin/bin/openluckin" switch-product --dept-id 1234 --product-id 5826 --sku-code 'SKU123' --attr-operation-param '{"attributeId":1,"subAttr":{"attributeId":2,"operation":1}}' --amount 1
 ```
 
---attr-operation-param 的取值结构（JSON Schema）：
-
-```json
-{
-  "description": "商品属性切换参数",
-  "properties": {
-    "attributeId": {
-      "format": "int64",
-      "type": "integer"
-    },
-    "subAttr": {
-      "properties": {
-        "attributeId": {
-          "format": "int64",
-          "type": "integer"
-        },
-        "operation": {
-          "format": "int32",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "attributeId",
-        "operation"
-      ],
-      "type": "object"
-    }
-  },
-  "required": [
-    "attributeId",
-    "subAttr"
-  ],
-  "type": "object"
-}
-```
-
 ### query-product-detail-info — 瑞幸咖啡查询商品详情
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -160,36 +128,6 @@ openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性
 "$HOME/.openluckin/bin/openluckin" preview-order --dept-id 1234 --product-list '[{"productId":5826,"skuCode":"SKU123","amount":1}]'
 ```
 
---product-list 的取值结构（JSON Schema）：
-
-```json
-{
-  "description": "订单商品列表",
-  "items": {
-    "properties": {
-      "amount": {
-        "format": "int32",
-        "type": "integer"
-      },
-      "productId": {
-        "format": "int64",
-        "type": "integer"
-      },
-      "skuCode": {
-        "type": "string"
-      }
-    },
-    "required": [
-      "amount",
-      "productId",
-      "skuCode"
-    ],
-    "type": "object"
-  },
-  "type": "array"
-}
-```
-
 ### create-order — 瑞幸咖啡创建订单
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -204,36 +142,6 @@ openluckin 把瑞幸官方 AI 开放平台的 MCP 点单服务封装成一次性
 
 ```bash
 "$HOME/.openluckin/bin/openluckin" create-order --dept-id 1234 --product-list '[{"productId":5826,"skuCode":"SKU123","amount":1}]' --longitude 116.3975 --latitude 39.9087
-```
-
---product-list 的取值结构（JSON Schema）：
-
-```json
-{
-  "description": "订单商品列表",
-  "items": {
-    "properties": {
-      "amount": {
-        "format": "int32",
-        "type": "integer"
-      },
-      "productId": {
-        "format": "int64",
-        "type": "integer"
-      },
-      "skuCode": {
-        "type": "string"
-      }
-    },
-    "required": [
-      "amount",
-      "productId",
-      "skuCode"
-    ],
-    "type": "object"
-  },
-  "type": "array"
-}
 ```
 
 ### query-order-detail-info — 瑞幸咖啡查询订单详情
